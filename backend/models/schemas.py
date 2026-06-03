@@ -35,6 +35,7 @@ class ReviewRequest(BaseModel):
     pr_url: str                # Full GitHub PR URL, e.g. https://github.com/owner/repo/pull/42
     include_tests: bool = True           # Whether to generate missing test suggestions
     include_bug_detection: bool = True   # Whether to run bug pattern detection
+    dry_run: bool = False                # If True, skip all API calls and return sample data
 
 
 class ReviewResponse(BaseModel):

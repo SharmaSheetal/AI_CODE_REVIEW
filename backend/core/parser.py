@@ -5,11 +5,17 @@ Tree-sitter builds an Abstract Syntax Tree (AST) — a tree that describes WHAT
 the code is (functions, classes, arguments) rather than what characters appear.
 We use this to extract per-function context so the LLM review is specific to
 individual functions, not just a blob of text.
+
+Uses tree-sitter >= 0.25 API with the official tree-sitter-python grammar package.
 """
 
-from tree_sitter_languages import get_parser
+from tree_sitter import Language, Parser
+import tree_sitter_python as tspython
 from dataclasses import dataclass, field
 from typing import List
+
+# Build the Language object once at module load — not on every parse call
+PY_LANGUAGE = Language(tspython.language())
 
 
 @dataclass
@@ -52,7 +58,7 @@ def _extract_functions(root_node, source_bytes: bytes) -> List[FunctionContext]:
 
             name = _extract_text(name_node, source_bytes) if name_node else "unknown"
 
-            # Parameters: collect identifier nodes (skips punctuation like commas)
+            # Collect parameter identifier names (skips punctuation like commas)
             param_names = []
             if params_node:
                 for child in params_node.children:
@@ -102,7 +108,7 @@ def parse_python_file(filename: str, source_code: str) -> ParsedFile:
     Main entry point. Takes a filename and its full source, returns a ParsedFile
     with all extracted function contexts ready to send to the LLM.
     """
-    parser = get_parser("python")
+    parser = Parser(PY_LANGUAGE)
     source_bytes = source_code.encode("utf-8")
     tree = parser.parse(source_bytes)
 
