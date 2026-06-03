@@ -58,12 +58,27 @@ def _extract_functions(root_node, source_bytes: bytes) -> List[FunctionContext]:
 
             name = _extract_text(name_node, source_bytes) if name_node else "unknown"
 
-            # Collect parameter identifier names (skips punctuation like commas)
+            # Collect parameter names — handle plain, typed, and default variants:
+            #   identifier          → def f(x)
+            #   typed_parameter     → def f(x: int)
+            #   default_parameter   → def f(x=0)
+            #   typed_default_parameter → def f(x: int = 0)
             param_names = []
             if params_node:
                 for child in params_node.children:
                     if child.type == "identifier":
                         param_names.append(_extract_text(child, source_bytes))
+                    elif child.type in (
+                        "typed_parameter",
+                        "default_parameter",
+                        "typed_default_parameter",
+                    ):
+                        # First child of these nodes is always the parameter name identifier
+                        name_child = child.child_by_field_name("name") or (
+                            child.children[0] if child.children else None
+                        )
+                        if name_child and name_child.type == "identifier":
+                            param_names.append(_extract_text(name_child, source_bytes))
 
             # Check for docstring: first statement in body is a string expression
             has_docstring = False

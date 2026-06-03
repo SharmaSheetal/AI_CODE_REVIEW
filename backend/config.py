@@ -7,7 +7,7 @@ os.environ directly. This makes secrets easy to test and impossible to leak
 by accident into logs.
 """
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -29,9 +29,7 @@ class Settings(BaseSettings):
     # --- Confidence scoring ---
     min_confidence: float = 0.5          # Suggestions below this are filtered out
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
 # Singleton — import `settings` everywhere instead of re-instantiating
