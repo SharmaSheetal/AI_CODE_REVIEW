@@ -37,6 +37,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Add GROQ_API_KEY in: repo Settings → Secrets and variables → Actions
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          # The PR URL is injected from the event context
+          # The PR URL is injected from the event context — no hardcoding needed
           PR_URL: ${{ github.event.pull_request.html_url }}
+          # Optional: change this to your fork's URL if you copy this workflow
+          TOOL_REPO_URL: https://github.com/SharmaSheetal/AI_CODE_REVIEW
         run: uv run python backend/scripts/post_review.py
