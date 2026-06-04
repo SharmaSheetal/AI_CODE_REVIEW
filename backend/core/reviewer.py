@@ -12,6 +12,7 @@ Think of this as the controller in an MVC pattern — it coordinates, not implem
 """
 
 import json
+import time
 from backend.core.github_client import fetch_pr_data
 from backend.core.parser import parse_python_file
 from backend.core.llm_client import get_review_response, get_test_response
@@ -101,6 +102,10 @@ async def run_review(
             continue
 
         for func in parsed.functions:
+            # Brief pause between functions to stay within Groq's TPM limit.
+            # Without this, rapid sequential calls exhaust the 6K token/min quota.
+            time.sleep(1)
+
             # Step 3a: Code review for every function in the diff
             raw_review = get_review_response(
                 filename=changed_file.filename,

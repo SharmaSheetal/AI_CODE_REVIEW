@@ -10,9 +10,14 @@ The prompt engineering here is key: we give the model structured context
 to exact locations in the diff.
 """
 
+import time
 import httpx
-from groq import Groq
+from groq import Groq, RateLimitError
 from backend.config import settings
+
+# Retry config for Groq rate limit errors (429)
+_MAX_RETRIES = 4
+_BASE_BACKOFF = 2  # seconds — doubles each retry: 2, 4, 8, 16
 from backend.core.parser import FunctionContext
 
 
@@ -67,15 +72,25 @@ Respond with a JSON object in exactly this format:
 
 
 def _call_groq(prompt: str) -> str:
-    """Calls LLaMA-3 via the Groq cloud API."""
+    """Calls LLaMA-3 via the Groq cloud API with exponential backoff on rate limits."""
     client = Groq(api_key=settings.groq_api_key)
-    response = client.chat.completions.create(
-        model=settings.groq_model,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.2,     # Low temperature = more deterministic output
-        max_tokens=1024,
-    )
-    return response.choices[0].message.content
+
+    for attempt in range(_MAX_RETRIES):
+        try:
+            response = client.chat.completions.create(
+                model=settings.groq_model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.2,
+                max_tokens=1024,
+            )
+            return response.choices[0].message.content
+
+        except RateLimitError:
+            if attempt == _MAX_RETRIES - 1:
+                raise   # Exhausted all retries — let the error propagate
+            wait = _BASE_BACKOFF ** attempt  # 1s, 2s, 4s, 8s
+            print(f"Groq rate limit hit — retrying in {wait}s (attempt {attempt + 1}/{_MAX_RETRIES})")
+            time.sleep(wait)
 
 
 def _call_ollama(prompt: str) -> str:
