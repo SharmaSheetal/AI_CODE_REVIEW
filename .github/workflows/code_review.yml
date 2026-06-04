@@ -1,0 +1,42 @@
+name: AI Code Review
+
+# Trigger on every PR event — opened, updated, or reopened
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  ai-review:
+    name: Run AI Code Review
+    runs-on: ubuntu-latest
+
+    # Permissions needed to post a comment back on the PR
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      # 1. Check out the code so we can run our scripts
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Install uv — the same package manager we use locally
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+
+      # 3. Install all Python dependencies from pyproject.toml
+      - name: Install dependencies
+        run: uv sync
+
+      # 4. Run the AI review pipeline and post the result as a PR comment
+      - name: Run AI review and post comment
+        env:
+          # GITHUB_TOKEN is provided automatically — no setup needed
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Add GROQ_API_KEY in: repo Settings → Secrets and variables → Actions
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          # The PR URL is injected from the event context
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: uv run python backend/scripts/post_review.py

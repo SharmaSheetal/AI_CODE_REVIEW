@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException
 from backend.models.schemas import ReviewRequest, ReviewResponse, Suggestion, SuggestionType
 from backend.core.reviewer import run_review
 import time
+import traceback
 
 router = APIRouter()
 
@@ -71,8 +72,8 @@ async def review_pull_request(request: ReviewRequest):
         # Raised by github_client when the URL is invalid or PR not found
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        # Catch-all for unexpected failures (LLM timeout, parse error, etc.)
-        raise HTTPException(status_code=500, detail=f"Review failed: {str(e)}")
+        traceback.print_exc()   # Print full stack trace to server logs
+        raise HTTPException(status_code=500, detail=f"Review failed: {repr(e)}")
 
     result.processing_time_seconds = round(time.time() - start, 2)
     return result
