@@ -13,10 +13,21 @@ export default function ReviewForm({ onSubmit, loading }) {
   const [dryRun, setDryRun] = useState(false);
   const [includeTests, setIncludeTests] = useState(true);
 
+  const DRY_RUN_PLACEHOLDER = "https://github.com/owner/repo/pull/1";
+
+  // In dry run mode the backend ignores the URL — use a placeholder so the
+  // user doesn't have to type anything real.
+  const effectiveUrl = dryRun ? DRY_RUN_PLACEHOLDER : url;
+
   function handleSubmit(e) {
-    e.preventDefault();           // Prevent browser page reload on form submit
-    if (!url.trim()) return;
-    onSubmit(url.trim(), dryRun, includeTests);
+    e.preventDefault();
+    onSubmit(effectiveUrl, dryRun, includeTests);
+  }
+
+  function handleDryRunToggle(e) {
+    setDryRun(e.target.checked);
+    // Clear the real URL when switching to dry run so it doesn't linger
+    if (e.target.checked) setUrl("");
   }
 
   return (
@@ -30,12 +41,15 @@ export default function ReviewForm({ onSubmit, loading }) {
       <div style={styles.inputRow}>
         <input
           type="url"
-          placeholder="https://github.com/owner/repo/pull/42"
-          value={url}
+          placeholder={dryRun ? DRY_RUN_PLACEHOLDER : "https://github.com/owner/repo/pull/42"}
+          value={dryRun ? DRY_RUN_PLACEHOLDER : url}
           onChange={(e) => setUrl(e.target.value)}
-          style={styles.input}
-          disabled={loading}
-          required
+          style={{
+            ...styles.input,
+            ...(dryRun ? styles.inputDisabled : {}),
+          }}
+          disabled={loading || dryRun}
+          required={!dryRun}
         />
         <button type="submit" style={styles.button} disabled={loading}>
           {loading ? "Reviewing…" : "Review PR"}
@@ -56,10 +70,10 @@ export default function ReviewForm({ onSubmit, loading }) {
           <input
             type="checkbox"
             checked={dryRun}
-            onChange={(e) => setDryRun(e.target.checked)}
+            onChange={handleDryRunToggle}
             disabled={loading}
           />
-          &nbsp;Dry run (sample data, no API calls)
+          &nbsp;Dry run <span style={styles.hint}>(no PR URL needed)</span>
         </label>
       </div>
     </form>
@@ -122,5 +136,14 @@ const styles = {
     display: "flex",
     alignItems: "center",
     cursor: "pointer",
+  },
+  inputDisabled: {
+    opacity: 0.4,
+    cursor: "not-allowed",
+  },
+  hint: {
+    color: "#6c7086",
+    fontSize: "12px",
+    marginLeft: "4px",
   },
 };
