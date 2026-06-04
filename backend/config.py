@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     # --- LLM (choose Groq for cloud speed OR Ollama for local/free) ---
     llm_provider: str = "groq"           # "groq" | "ollama"
     groq_api_key: str = ""               # Groq cloud API key
-    groq_model: str = "llama3-70b-8192"  # Groq model identifier for LLaMA-3
+    groq_model: str = "llama-3.1-8b-instant"  # Groq model — swap to llama-3.3-70b-versatile for higher quality
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3"         # Model name as pulled in Ollama
 
