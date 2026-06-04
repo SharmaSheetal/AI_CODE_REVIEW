@@ -14,21 +14,26 @@ import sys
 from github import Github
 
 
+# Label per suggestion type — used in the PR comment header
+TYPE_LABELS = {
+    "bug": "BUG",
+    "security": "SECURITY",
+    "test": "TEST",
+    "review": "REVIEW",
+}
+
+# Marker string used to find and replace previous AI review comments on re-runs
+COMMENT_MARKER = "<!-- ai-code-review -->"
+
+
 def format_suggestion_md(suggestion) -> str:
     """Formats one Suggestion as a Markdown block for the PR comment."""
-    # Emoji per type — makes the comment scannable at a glance
-    icons = {
-        "bug": "🐛",
-        "security": "🔒",
-        "test": "🧪",
-        "review": "💡",
-    }
-    icon = icons.get(suggestion.suggestion_type, "💡")
+    label = TYPE_LABELS.get(suggestion.suggestion_type, "REVIEW")
     confidence_pct = int(suggestion.confidence * 100)
     confidence_bar = "█" * (confidence_pct // 10) + "░" * (10 - confidence_pct // 10)
 
     lines = [
-        f"### {icon} `{suggestion.suggestion_type.upper()}` — `{suggestion.file_path}:{suggestion.line_start}`",
+        f"### [{label}] `{suggestion.file_path}:{suggestion.line_start}`",
         f"> Confidence: {confidence_bar} {confidence_pct}%",
         "",
         suggestion.message,
@@ -38,7 +43,7 @@ def format_suggestion_md(suggestion) -> str:
         lines += [
             "",
             "<details>",
-            "<summary>💻 Suggested fix</summary>",
+            "<summary>Suggested fix</summary>",
             "",
             "```python",
             suggestion.suggested_fix,
@@ -53,14 +58,15 @@ def format_suggestion_md(suggestion) -> str:
 def format_comment(pr_url: str, result) -> str:
     """Builds the full PR comment body from a ReviewResponse."""
     header = (
-        "## 🤖 AI Code Review\n\n"
+        f"{COMMENT_MARKER}\n"
+        "## AI Code Review\n\n"
         f"**{result.total_suggestions} suggestion{'s' if result.total_suggestions != 1 else ''}** "
         f"found in `{result.repo}` PR #{result.pr_number} "
         f"_(processed in {result.processing_time_seconds}s using LLaMA-3)_\n\n"
     )
 
     if result.total_suggestions == 0:
-        return header + "✅ No issues found. Looks good!\n"
+        return header + "No issues found. Looks good!\n"
 
     # Group by type for a structured layout
     by_type = {}
@@ -117,7 +123,7 @@ async def main():
 
     # Remove any previous AI review comment to avoid stacking duplicates on re-runs
     for comment in pr.get_issue_comments():
-        if "🤖 AI Code Review" in comment.body:
+        if COMMENT_MARKER in comment.body:
             comment.delete()
 
     pr.create_issue_comment(comment_body)
